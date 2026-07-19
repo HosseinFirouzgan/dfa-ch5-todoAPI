@@ -146,5 +146,5 @@ CORS_ALLOWED_ORIGINS = (
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    "localhost:3000"
+    "http://localhost:3000"
 ]  # to be able to connect to any front-end that uses port 3000
