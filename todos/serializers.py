@@ -10,4 +10,5 @@ class TodoSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "body",
+            "completed",
         )
