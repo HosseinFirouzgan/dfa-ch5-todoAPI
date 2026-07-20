@@ -12,11 +12,15 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+from datetime import timedelta
 
 #######################################
 # Environment Variables
+load_dotenv()
+
 DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = [os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")]
+ALLOWED_HOSTS = [os.environ.get("RENDER_EXTERNAL_HOSTNAME", "127.0.0.1")]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
 #######################################
@@ -43,6 +47,7 @@ INSTALLED_APPS = [
     "todos.apps.TodosConfig",
     # 3rd Party
     "rest_framework",
+    "rest_framework_simplejwt",
     "corsheaders",
     "whitenoise.runserver_nostatic",
 ]
@@ -138,8 +143,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # rest framework configs:
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSESS": [
-        "rest_framework.permissions.AllowAny",
-    ]
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
+
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
 }
 
 CORS_ALLOWED_ORIGINS = (
