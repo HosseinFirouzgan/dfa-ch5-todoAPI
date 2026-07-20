@@ -145,7 +145,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = (
     "http://127.0.0.1:3000",  # default port for React
     "http://127.0.0.1:8000",
-    "https://ch5-todoapi-frontend.onrender.com/",
+    "https://ch5-todoapi-frontend.onrender.com",
 )
 
 CSRF_TRUSTED_ORIGINS = [
