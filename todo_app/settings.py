@@ -15,7 +15,9 @@ import os
 
 #######################################
 # Environment Variables
-
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+ALLOWED_HOSTS = [os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")]
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 #######################################
 
@@ -26,14 +28,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-zth@z&e90gl%bokz&-dt$u&623x&6se=yo786n!9-3dz^qy_0_"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -151,6 +145,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = (
     "http://127.0.0.1:3000",  # default port for React
     "http://127.0.0.1:8000",
+    "https://ch5-todoapi-frontend.onrender.com/",
 )
 
 CSRF_TRUSTED_ORIGINS = [
