@@ -11,6 +11,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+#######################################
+# Environment Variables
+
+
+#######################################
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +33,7 @@ SECRET_KEY = "django-insecure-zth@z&e90gl%bokz&-dt$u&623x&6se=yo786n!9-3dz^qy_0_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", "127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -141,10 +149,10 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = (
-    "hhtp://localhost:3000",  # default port for React
-    "http://localhost:8000",
+    "http://127.0.0.1:3000",  # default port for React
+    "http://127.0.0.1:8000",
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000"
+    "http://127.0.0.1:3000"
 ]  # to be able to connect to any front-end that uses port 3000

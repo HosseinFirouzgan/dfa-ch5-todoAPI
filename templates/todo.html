@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>todo — task runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14181F;
+    --surface: #1B212A;
+    --surface-2: #212833;
+    --border: #2A313D;
+    --text: #E7E9EC;
+    --text-dim: #8A94A6;
+    --text-faint: #59626F;
+    --accent: #E8A33D;
+    --accent-2: #4FD1C5;
+    --danger: #E8664A;
+  }
+  :root[data-theme="light"]{
+    --bg: #F3F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #EAEDF1;
+    --border: #D8DEE5;
+    --text: #1C222B;
+    --text-dim: #57606E;
+    --text-faint: #8A94A6;
+    --accent: #C97C1E;
+    --accent-2: #1E9C8F;
+    --danger: #C94A32;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ background: var(--bg); margin: 0; }
+  body{
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .font-display{ font-family: 'Space Grotesk', sans-serif; }
+  [hidden]{ display: none !important; }
+
+  ::selection{ background: var(--accent); color: #14181F; }
+
+  input:focus, textarea:focus, button:focus, [tabindex]:focus{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button{ font-family: inherit; cursor: pointer; background: none; border: none; color: inherit; }
+
+  /* ---- layout shell ---- */
+  .app-shell{
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2.5rem 1rem;
+  }
+  @media (min-width: 640px){
+    .app-shell{ padding: 3.5rem 1.5rem; }
+  }
+
+  /* ---- header ---- */
+  .app-header{ margin-bottom: 2rem; }
+  .header-row{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .title{
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  @media (min-width: 640px){ .title{ font-size: 1.875rem; } }
+
+  .header-actions{
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .config-btn{
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    transition: color .12s ease;
+  }
+  @media (min-width: 640px){ .config-btn{ font-size: 0.875rem; } }
+  .config-btn:hover{ color: var(--accent); }
+  .theme-btn{
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-faint);
+    transition: color .12s ease;
+  }
+  @media (min-width: 640px){ .theme-btn{ width: 1.5rem; height: 1.5rem; font-size: 1rem; } }
+  .theme-btn:hover{ color: var(--accent); }
+
+  .status-line{
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  @media (min-width: 640px){ .status-line{ font-size: 0.875rem; } }
+
+  /* ---- panels (settings / error) ---- */
+  .panel{
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .panel-label{
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+  .panel-row{
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px){ .panel-row{ flex-direction: row; } }
+  .panel-input{
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+  }
+  .panel-btn{
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: var(--accent);
+    color: #14181F;
+  }
+  .panel-hint{
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    line-height: 1.5;
+  }
+
+  .error-banner{
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--danger);
+    background: rgba(232,102,74,0.08);
+    color: var(--danger);
+  }
+
+  /* ---- add form ---- */
+  .add-form{ margin-bottom: 1.5rem; }
+  .add-card{
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: border-color .12s ease;
+  }
+  .add-card:focus-within{ border-color: var(--accent); }
+  .add-row{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  .add-row--notes{
+    border-top: 1px solid var(--border);
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+  .add-prompt{
+    color: var(--accent);
+    font-weight: 600;
+    user-select: none;
+  }
+  .add-prompt--dim{ color: var(--text-faint); }
+  .add-input{
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    color: var(--text);
+    font-family: inherit;
+  }
+  .add-input::placeholder{ color: var(--text-faint); }
+  .add-input--notes{
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .add-btn{
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: var(--text-dim);
+  }
+  @media (min-width: 640px){ .add-btn{ font-size: 0.875rem; } }
+
+  /* ---- tabs ---- */
+  .tabs{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+  }
+  @media (min-width: 640px){ .tabs{ font-size: 0.875rem; } }
+  .tab{
+    color: var(--text-dim);
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: color .12s ease, background-color .12s ease;
+  }
+  .tab.active{
+    color: var(--accent);
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+  .count-label{
+    margin-left: auto;
+    color: var(--text-faint);
+  }
+
+  /* ---- list card ---- */
+  .list-card{
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  @media (min-width: 640px){
+    .list{ max-height: 65vh; overflow-y: auto; }
+    .list::-webkit-scrollbar{ width: 8px; }
+    .list::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 4px; }
+  }
+
+  .empty-state, .loading-state{
+    padding: 2.5rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+  }
+  .empty-state{ color: var(--text-faint); }
+  .loading-state{ color: var(--text-dim); }
+
+  /* ---- footer ---- */
+  .app-footer{
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: center;
+  }
+  .app-footer .api-base{
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (min-width: 640px){
+    .app-footer{
+      flex-direction: row;
+      justify-content: space-between;
+      text-align: left;
+    }
+    .app-footer .api-base{ max-width: 60%; }
+  }
+
+  /* ---- blinking terminal cursor ---- */
+  .cursor{
+    display: inline-block;
+    width: 8px;
+    height: 1.1em;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink{ 50%{ opacity: 0; } }
+  @media (prefers-reduced-motion: reduce){
+    .cursor{ animation: none; opacity: 1; }
+  }
+
+  /* ---- todo rows ---- */
+  .todo-item{
+    border-bottom: 1px solid var(--border);
+    transition: background-color .12s ease;
+  }
+  .todo-item:hover{ background: var(--surface-2); }
+  .todo-item:last-child{ border-bottom: none; }
+
+  .todo-row{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .icon-btn{
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn--sm{ width: 2rem; height: 2rem; }
+  @media (min-width: 640px){
+    .icon-btn{ width: 1.5rem; height: 1.5rem; }
+    .icon-btn--sm{ width: 1.25rem; height: 1.25rem; }
+  }
+
+  .bracket-box{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1;
+    white-space: pre;
+    color: var(--text-faint);
+    transition: color .15s ease, transform .1s ease;
+  }
+  .bracket-box.done{ color: var(--accent-2); }
+  button:active .bracket-box{ transform: scale(0.9); }
+
+  .todo-title{
+    flex: 1;
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+  @media (min-width: 640px){ .todo-title{ font-size: 1rem; } }
+  .title-done{
+    color: var(--text-faint);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-faint);
+  }
+
+  .del-btn{
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--text-faint);
+    opacity: 1;
+    transition: opacity .12s ease, color .12s ease;
+  }
+  .del-btn:hover{ color: var(--danger); }
+  /* only hide-until-hover on devices that actually support hover (desktop);
+     touch devices keep it visible since there's no hover state to reveal it */
+  @media (hover: hover) and (min-width: 640px){
+    .del-btn{ width: 1.5rem; height: 1.5rem; font-size: 0.875rem; opacity: 0; }
+    .todo-item:hover .del-btn, .todo-item:focus-within .del-btn{ opacity: 1; }
+  }
+
+  .caret{
+    display: inline-block;
+    transition: transform .15s ease;
+    color: var(--text-faint);
+  }
+  .caret.open{ transform: rotate(90deg); color: var(--accent); }
+  .caret-btn:hover .caret{ color: var(--accent); }
+
+  .notes-wrap{
+    padding: 0 1rem 0.9rem 4.25rem;
+  }
+  @media (min-width: 640px){
+    .notes-wrap{ padding-left: 2.75rem; }
+  }
+  .notes-box{
+    width: 100%;
+    resize: vertical;
+    min-height: 64px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .notes-box::placeholder{ color: var(--text-faint); }
+  .save-hint{
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    margin-top: 4px;
+    min-height: 1em;
+  }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- header -->
+    <header class="app-header">
+      <div class="header-row">
+        <h1 class="font-display title">
+          todo<span style="color:var(--accent)">.</span>list
+        </h1>
+        <div class="header-actions">
+          <button id="themeBtn" class="theme-btn" aria-label="toggle light/dark theme" title="toggle light/dark theme">☾</button>
+          <button id="settingsBtn" class="config-btn" aria-label="API settings">
+            [config]
+          </button>
+        </div>
+      </div>
+      <p id="statusLine" class="status-line">
+        connecting<span class="cursor"></span>
+      </p>
+    </header>
+
+    <!-- settings panel (hidden by default) -->
+    <div id="settingsPanel" class="panel" hidden>
+      <label class="panel-label">api base url</label>
+      <div class="panel-row">
+        <input id="apiBaseInput" type="text" class="panel-input"
+          placeholder="http://localhost:8000/api/todos/">
+        <button id="applyApiBase" class="panel-btn">
+          apply
+        </button>
+      </div>
+      <p class="panel-hint">
+        expects a DRF-style endpoint: GET/POST here, PATCH/DELETE at &lt;url&gt;&lt;id&gt;/.
+        change is in-memory only — resets on reload. edit the API_CONFIG constant
+        in the script to make it permanent.
+      </p>
+    </div>
+
+    <!-- error banner -->
+    <div id="errorBanner" class="error-banner" hidden></div>
+
+    <!-- add todo (command prompt style) -->
+    <form id="addForm" class="add-form">
+      <div class="add-card">
+        <div class="add-row">
+          <span class="add-prompt">&gt;</span>
+          <input
+            id="addInput"
+            type="text"
+            autocomplete="off"
+            placeholder="add a task, then press enter"
+            class="add-input"
+          >
+          <button type="submit" id="addBtn" class="add-btn">
+            ↵
+          </button>
+        </div>
+        <div class="add-row add-row--notes">
+          <span class="add-prompt add-prompt--dim">//</span>
+          <input
+            id="addNotesInput"
+            type="text"
+            autocomplete="off"
+            placeholder="add a note (optional)"
+            class="add-input add-input--notes"
+          >
+        </div>
+      </div>
+    </form>
+
+    <!-- filter tabs -->
+    <div class="tabs">
+      <button data-filter="all" class="tab active">all</button>
+      <button data-filter="active" class="tab">active</button>
+      <button data-filter="done" class="tab">done</button>
+      <span class="count-label" id="countLabel"></span>
+    </div>
+
+    <!-- list -->
+    <div class="list-card">
+      <ul id="list" class="list"></ul>
+
+      <div id="emptyState" class="empty-state" hidden>
+        // no tasks. add one above.
+      </div>
+
+      <div id="loadingState" class="loading-state">
+        loading tasks<span class="cursor"></span>
+      </div>
+    </div>
+
+    <footer class="app-footer">
+      <span id="apiBaseLabel" class="api-base"></span>
+      <span>⏎ add · ▸ notes · click bracket to toggle · × to delete</span>
+    </footer>
+
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ------------------------------------------------------------------
+   * CONFIG — matches:
+   *   GET    /api/todos/          list
+   *   POST   /api/todos/          create
+   *   GET    /api/todos/{id}/     retrieve
+   *   PUT    /api/todos/{id}/     update
+   *   PATCH  /api/todos/{id}/     partial update
+   *   DELETE /api/todos/{id}/     destroy
+   * Model fields: title, body (notes), completed.
+   * ---------------------------------------------------------------- */
+  const API_CONFIG = {
+    base: "http://localhost:8000/api/todos/",
+    fields: { title: "title", body: "body", completed: "completed", id: "id" }
+  };
+
+  let state = {
+    todos: [],
+    filter: "all",
+    loading: true,
+    error: null,
+    expanded: new Set(),
+  };
+
+  const els = {
+    list: document.getElementById("list"),
+    emptyState: document.getElementById("emptyState"),
+    loadingState: document.getElementById("loadingState"),
+    statusLine: document.getElementById("statusLine"),
+    errorBanner: document.getElementById("errorBanner"),
+    addForm: document.getElementById("addForm"),
+    addInput: document.getElementById("addInput"),
+    addNotesInput: document.getElementById("addNotesInput"),
+    countLabel: document.getElementById("countLabel"),
+    apiBaseLabel: document.getElementById("apiBaseLabel"),
+    themeBtn: document.getElementById("themeBtn"),
+    settingsBtn: document.getElementById("settingsBtn"),
+    settingsPanel: document.getElementById("settingsPanel"),
+    apiBaseInput: document.getElementById("apiBaseInput"),
+    applyApiBase: document.getElementById("applyApiBase"),
+    tabs: Array.from(document.querySelectorAll(".tab")),
+  };
+
+  const F = API_CONFIG.fields;
+
+  function apiUrl(id){
+    return id ? `${API_CONFIG.base}${id}/` : API_CONFIG.base;
+  }
+
+  function setError(msg){
+    state.error = msg;
+    if (msg){
+      els.errorBanner.textContent = msg;
+      els.errorBanner.hidden = false;
+    } else {
+      els.errorBanner.hidden = true;
+    }
+  }
+
+  function setStatus(text){
+    els.statusLine.innerHTML = text;
+  }
+
+  async function apiRequest(path, options = {}){
+    const res = await fetch(path, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    if (!res.ok){
+      let detail = "";
+      try { detail = JSON.stringify(await res.json()); } catch(e) {}
+      throw new Error(`${res.status} ${res.statusText} ${detail}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  async function loadTodos(){
+    state.loading = true;
+    render();
+    try {
+      const data = await apiRequest(apiUrl());
+      state.todos = Array.isArray(data) ? data : (data.results || []);
+      setError(null);
+      setStatus(`connected <span style="color:var(--accent-2)">●</span>`);
+    } catch (err) {
+      setError(
+        `couldn't reach the api at ${API_CONFIG.base} — ${err.message}. ` +
+        `check the url in [config], and that CORS is enabled on the Django side (django-cors-headers).`
+      );
+      setStatus(`disconnected <span style="color:var(--danger)">●</span>`);
+      state.todos = [];
+    } finally {
+      state.loading = false;
+      render();
+    }
+  }
+
+  async function addTodo(title, note){
+    const noteVal = note || "";
+    const optimistic = { [F.id]: `tmp-${Date.now()}`, [F.title]: title, [F.body]: noteVal, [F.completed]: false, _pending: true };
+    state.todos = [optimistic, ...state.todos];
+    render();
+    try {
+      const created = await apiRequest(apiUrl(), {
+        method: "POST",
+        body: JSON.stringify({ [F.title]: title, [F.body]: noteVal }),
+      });
+      state.todos = state.todos.map(t => t === optimistic ? created : t);
+      setError(null);
+    } catch (err) {
+      state.todos = state.todos.filter(t => t !== optimistic);
+      setError(`couldn't add task — ${err.message}`);
+    }
+    render();
+  }
+
+  async function toggleTodo(todo){
+    const next = !todo[F.completed];
+    todo[F.completed] = next; // optimistic
+    render();
+    try {
+      await apiRequest(apiUrl(todo[F.id]), {
+        method: "PATCH",
+        body: JSON.stringify({ [F.completed]: next }),
+      });
+      setError(null);
+    } catch (err) {
+      todo[F.completed] = !next; // revert
+      setError(`couldn't update task — ${err.message}`);
+      render();
+    }
+  }
+
+  async function saveNotes(todo, textarea, hintEl){
+    const value = textarea.value;
+    if (value === (todo[F.body] || "")) return; // nothing changed
+    hintEl.textContent = "saving…";
+    try {
+      await apiRequest(apiUrl(todo[F.id]), {
+        method: "PATCH",
+        body: JSON.stringify({ [F.body]: value }),
+      });
+      todo[F.body] = value;
+      hintEl.textContent = "saved ✓";
+      setError(null);
+      setTimeout(() => { if (hintEl.textContent === "saved ✓") hintEl.textContent = ""; }, 1500);
+    } catch (err) {
+      hintEl.textContent = "";
+      setError(`couldn't save note — ${err.message}`);
+    }
+  }
+
+  async function deleteTodo(todo){
+    const prev = state.todos;
+    state.todos = state.todos.filter(t => t !== todo);
+    render();
+    try {
+      await apiRequest(apiUrl(todo[F.id]), { method: "DELETE" });
+      setError(null);
+    } catch (err) {
+      state.todos = prev;
+      setError(`couldn't delete task — ${err.message}`);
+      render();
+    }
+  }
+
+  function filteredTodos(){
+    if (state.filter === "active") return state.todos.filter(t => !t[F.completed]);
+    if (state.filter === "done") return state.todos.filter(t => t[F.completed]);
+    return state.todos;
+  }
+
+  function render(){
+    els.loadingState.hidden = !state.loading;
+    els.apiBaseLabel.textContent = API_CONFIG.base;
+
+    const visible = filteredTodos();
+    const total = state.todos.length;
+    const done = state.todos.filter(t => t[F.completed]).length;
+    els.countLabel.textContent = total ? `${done}/${total} done` : "";
+
+    els.tabs.forEach(tab => tab.classList.toggle("active", tab.dataset.filter === state.filter));
+
+    if (state.loading){
+      els.list.innerHTML = "";
+      els.emptyState.hidden = true;
+      return;
+    }
+
+    if (!visible.length){
+      els.list.innerHTML = "";
+      els.emptyState.hidden = false;
+      els.emptyState.textContent = total
+        ? `// nothing here in "${state.filter}"`
+        : `// no tasks. add one above.`;
+      return;
+    }
+    els.emptyState.hidden = true;
+
+    els.list.innerHTML = "";
+    visible.forEach(todo => {
+      const id = todo[F.id];
+      const isDone = !!todo[F.completed];
+      const isOpen = state.expanded.has(id);
+
+      const li = document.createElement("li");
+      li.className = "todo-item";
+      if (todo._pending) li.style.opacity = "0.5";
+
+      // --- row ---
+      const row = document.createElement("div");
+      row.className = "todo-row";
+
+      const caretBtn = document.createElement("button");
+      caretBtn.type = "button";
+      caretBtn.className = "caret-btn icon-btn icon-btn--sm";
+      caretBtn.setAttribute("aria-label", isOpen ? "hide notes" : "show notes");
+      const caret = document.createElement("span");
+      caret.className = "caret" + (isOpen ? " open" : "");
+      caret.textContent = "▸";
+      caretBtn.appendChild(caret);
+      caretBtn.addEventListener("click", () => {
+        if (state.expanded.has(id)) state.expanded.delete(id);
+        else state.expanded.add(id);
+        render();
+      });
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.setAttribute("aria-label", isDone ? "mark as active" : "mark as done");
+      toggleBtn.className = "icon-btn";
+      const bracket = document.createElement("span");
+      bracket.className = "bracket-box" + (isDone ? " done" : "");
+      bracket.textContent = isDone ? "[x]" : "[ ]";
+      toggleBtn.appendChild(bracket);
+      toggleBtn.addEventListener("click", () => toggleTodo(todo));
+
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "todo-title" + (isDone ? " title-done" : "");
+      titleSpan.textContent = todo[F.title];
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.setAttribute("aria-label", "delete task");
+      delBtn.className = "del-btn";
+      delBtn.textContent = "×";
+      delBtn.addEventListener("click", () => deleteTodo(todo));
+
+      row.appendChild(caretBtn);
+      row.appendChild(toggleBtn);
+      row.appendChild(titleSpan);
+      row.appendChild(delBtn);
+      li.appendChild(row);
+
+      // --- notes (collapsible) ---
+      if (isOpen){
+        const notesWrap = document.createElement("div");
+        notesWrap.className = "notes-wrap";
+
+        const textarea = document.createElement("textarea");
+        textarea.className = "notes-box";
+        textarea.placeholder = "// notes for this task…";
+        textarea.value = todo[F.body] || "";
+
+        const hint = document.createElement("div");
+        hint.className = "save-hint";
+
+        textarea.addEventListener("blur", () => saveNotes(todo, textarea, hint));
+        textarea.addEventListener("keydown", (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter"){
+            e.preventDefault();
+            textarea.blur();
+          }
+        });
+
+        notesWrap.appendChild(textarea);
+        notesWrap.appendChild(hint);
+        li.appendChild(notesWrap);
+      }
+
+      els.list.appendChild(li);
+    });
+  }
+
+  // ---- events ----
+  els.addForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = els.addInput.value.trim();
+    if (!val) return;
+    const noteVal = els.addNotesInput.value.trim();
+    els.addInput.value = "";
+    els.addNotesInput.value = "";
+    addTodo(val, noteVal);
+  });
+
+  // ---- theme (persisted via localStorage) ----
+  function applyTheme(theme){
+    if (theme === "light"){
+      document.documentElement.setAttribute("data-theme", "light");
+      els.themeBtn.textContent = "☼";
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      els.themeBtn.textContent = "☾";
+    }
+    els.themeBtn.dataset.theme = theme;
+    try { localStorage.setItem("todo-theme", theme); } catch (e) { /* storage unavailable, e.g. private browsing */ }
+  }
+  els.themeBtn.addEventListener("click", () => {
+    const current = els.themeBtn.dataset.theme || "dark";
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+  let savedTheme = "dark";
+  try { savedTheme = localStorage.getItem("todo-theme") || "dark"; } catch (e) { /* storage unavailable */ }
+  applyTheme(savedTheme);
+
+  els.tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      state.filter = tab.dataset.filter;
+      render();
+    });
+  });
+
+  els.settingsBtn.addEventListener("click", () => {
+    els.apiBaseInput.value = API_CONFIG.base;
+    els.settingsPanel.hidden = !els.settingsPanel.hidden;
+  });
+
+  els.applyApiBase.addEventListener("click", () => {
+    const val = els.apiBaseInput.value.trim();
+    if (!val) return;
+    API_CONFIG.base = val.endsWith("/") ? val : val + "/";
+    els.settingsPanel.hidden = true;
+    loadTodos();
+  });
+
+  // init
+  loadTodos();
+})();
+</script>
+</body>
+</html>
