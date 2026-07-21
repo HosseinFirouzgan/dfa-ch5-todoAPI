@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # local
     "todos.apps.TodosConfig",
+    "users.apps.UsersConfig",
     # 3rd Party
     "rest_framework",
     "rest_framework_simplejwt",
