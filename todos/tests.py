@@ -11,8 +11,18 @@ User = get_user_model()
 class TodoAPITest(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username="alice", password="testpass123")
-        cls.other_user = User.objects.create_user(username="bob", password="testpass123")
+        cls.user = User.objects.create_user(
+            username="alice",
+            email="alice@mail.com",
+            password="testpass123",
+            # password2="testpass123",
+        )
+        cls.other_user = User.objects.create_user(
+            username="bob",
+            email="bob@mail.com",
+            password="testpass123",
+            # password2="testpass123",
+        )
 
         cls.todo = Todo.objects.create(
             user=cls.user,
@@ -57,7 +67,9 @@ class TodoAPITest(APITestCase):
 
     def test_cannot_access_another_users_todo(self):
         self.authenticate(self.user)
-        response = self.client.get(reverse("todo-detail", kwargs={"pk": self.other_todo.id}))
+        response = self.client.get(
+            reverse("todo-detail", kwargs={"pk": self.other_todo.id})
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_create_todo_assigns_current_user(self):

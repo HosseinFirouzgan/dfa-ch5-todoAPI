@@ -2,8 +2,8 @@ from django.contrib import admin
 
 from .models import Todo
 
-
 # Register your models here.
+"""
 class TodoAdmin(admin.ModelAdmin):
     list_display = (
         "title",
@@ -12,3 +12,20 @@ class TodoAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Todo, TodoAdmin)
+"""
+
+
+class TodoAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "user",
+        "completed",
+    )
+
+    list_filter = ("completed",)
+
+    search_fields = (
+        "title",
+        "body",
+        "user__username",
+    )
