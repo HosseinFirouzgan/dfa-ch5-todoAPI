@@ -10,6 +10,4 @@ class User(AbstractUser):
     without replacing Django's authentication system.
     """
 
-    email = models.EmailField(unique=True)
-
-    pass
+    email = models.EmailField(unique=True, blank=False)
