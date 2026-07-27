@@ -37,7 +37,7 @@ class TodoAPITest(APITestCase):
 
     def authenticate(self, user):
         response = self.client.post(
-            reverse("token_obtain_pair"),
+            reverse("login"),
             {"username": user.username, "password": "testpass123"},
         )
         token = response.data["access"]
