@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # 3rd Party
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "whitenoise.runserver_nostatic",
 ]
