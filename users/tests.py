@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 
 User = get_user_model()
 
@@ -130,3 +131,34 @@ class LoginViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutViewTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.password = "testpass123"
+        cls.user = User.objects.create_user(
+            username="sam_winchester",
+            email="life@hunting.com",
+            password=cls.password,
+        )
+
+    def test_authenticated_user_can_logout(self):
+        login_reponse = self.client.post(
+            reverse("login"),
+            {"username": self.user.username, "password": self.password},
+        )
+        refresh = login_reponse.data["refresh"]
+        access = login_reponse.data["access"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        response = self.client.post(
+            reverse("logout"),
+            {"refresh": refresh, "access": access},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
+
+    def test_blacklisted_refresh_token_cannot_be_used_again(self):
+        pass
