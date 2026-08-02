@@ -161,4 +161,37 @@ class LogoutViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
 
     def test_blacklisted_refresh_token_cannot_be_used_again(self):
-        pass
+
+        # login
+        login_response = self.client.post(
+            reverse("login"),
+            {"username": self.user.username, "password": self.password},
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        # print(login_response.data)
+
+        # logout
+        refresh = login_response.data["refresh"]
+        access = login_response.data["access"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        logout_response = self.client.post(
+            reverse("logout"),
+            {"refresh": refresh},
+        )
+        self.assertEqual(logout_response.status_code, status.HTTP_205_RESET_CONTENT)
+
+        # refresh token
+        refresh_response = self.client.post(
+            reverse("token_refresh"),
+            {"refresh": refresh},
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_anonymous_user_cannot_logout(self):
+        response = self.client.post(
+            reverse("logout"),
+            {"refresh": "dummy token"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
