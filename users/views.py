@@ -8,6 +8,7 @@ from .serializers import (
     LogoutSerializer,
     RegisterSerializer,
     LoginSerializer,
+    UserSerializer,
 )
 from users import serializers
 
@@ -51,3 +52,11 @@ class PasswordChangeView(generics.GenericAPIView):
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user

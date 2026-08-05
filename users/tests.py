@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.http import response
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -310,3 +311,46 @@ class PasswordChangeViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfileViewTests(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.password = "impala123"
+        cls.user = User.objects.create_user(
+            username="supernatural_fan",
+            email="fan@gmail.com",
+            password=cls.password,
+        )
+
+    def authenticate(self):
+        response = self.client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "email": self.user.email,
+                "password": self.password,
+                "password2": self.password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data["access"]}")
+
+    def test_authenticated_user_can_get_profile(self):
+        self.authenticate()
+
+        response = self.client.get(reverse("profile"))
+        print(response.data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], self.user.username)
+        self.assertEqual(response.data["email"], self.user.email)
+
+    def test_anonymous_user_cannot_get_profile(self):
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
