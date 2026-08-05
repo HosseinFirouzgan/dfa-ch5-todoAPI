@@ -68,3 +68,43 @@ class LogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"refresh": "Invalid or expired refresh token."}
             )
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(
+        write_only=True, validators=[validate_password]
+    )
+    new_password2 = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+
+        # check old_password
+        if not user.check_password(attrs["old_password"]):
+            raise serializers.ValidationError(
+                {"old_password": ["old password is incorrect"]}
+            )
+
+        # check passwords match
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError(
+                {"new_password2": ["passwords do not match"]}
+            )
+
+        # prevent using the same password for the new one
+        # if attrs["old_password"] == attrs["new_password"]:
+        if user.check_password(attrs["new_password"]):
+            raise serializers.ValidationError(
+                {"new_password": ["New password is the same as the old one."]}
+            )
+
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+
+        return user
