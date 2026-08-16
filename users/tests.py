@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.http import response
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from django.core import mail
 
 User = get_user_model()
 
@@ -354,3 +354,48 @@ class UserProfileViewTests(APITestCase):
         response = self.client.get(reverse("profile"))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PasswordResetViewTest(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.password = "testpass123"
+        cls.user = User.objects.create_user(
+            email="testuser@mail.com",
+            username="testuser",
+            password=cls.password,
+        )
+
+    def test_password_reset_email_is_sent(self):
+        response = self.client.post(
+            reverse("password_reset"),
+            {"email": self.user.email},
+            format="json",
+        )
+
+        print(mail.outbox)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(mail.outbox, 1)
+        self.assertIn("Password Reset", mail.outbox[0].subject)
+
+    def test_unknown_email_returns_success(self):
+        response = self.client.post(
+            reverse("password_reset"),
+            {"email": "wrongemail@notmail.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertIn("Password", response.data)
+
+    def test_invalid_email_is_rejected(self):
+        response = self.client.post(
+            reverse("password_reset"),
+            {"email": "notanemail"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)

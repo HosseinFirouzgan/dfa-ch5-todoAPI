@@ -170,3 +170,6 @@ CORS_ALLOWED_ORIGINS = (
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000"
 ]  # to be able to connect to any front-end that uses port 3000
+
+
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"  # stores email in memeory making them available in tests
