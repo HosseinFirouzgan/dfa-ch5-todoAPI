@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from .serializers import (
     ChangePasswordSerializer,
     LogoutSerializer,
+    PasswordResetSerializer,
     RegisterSerializer,
     LoginSerializer,
     UserSerializer,
@@ -64,6 +65,23 @@ class ProfileView(generics.RetrieveAPIView):
 
 
 class PasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        return Response(status=status.HTTP_200_OK)
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {
+                "detail": "if an account with this email exits, am email has been sent to it"
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        return Response(status=status.HTTP_204_NO_CONTENT)

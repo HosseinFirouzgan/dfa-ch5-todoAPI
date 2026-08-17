@@ -1,8 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.http import response
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.core import mail
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.contrib.auth.tokens import default_token_generator
 
 User = get_user_model()
 
@@ -344,7 +348,7 @@ class UserProfileViewTests(APITestCase):
         self.authenticate()
 
         response = self.client.get(reverse("profile"))
-        print(response.data)
+        # print(response.data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["username"], self.user.username)
@@ -374,9 +378,9 @@ class PasswordResetViewTest(APITestCase):
             format="json",
         )
 
-        print(mail.outbox)
+        # print(list(mail.outbox))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(mail.outbox, 1)
+        self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Password Reset", mail.outbox[0].subject)
 
     def test_unknown_email_returns_success(self):
@@ -388,7 +392,7 @@ class PasswordResetViewTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 0)
-        self.assertIn("Password", response.data)
+        self.assertIn("email", response.data["detail"])
 
     def test_invalid_email_is_rejected(self):
         response = self.client.post(
@@ -399,3 +403,137 @@ class PasswordResetViewTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("email", response.data)
+
+
+class PasswordResetConfirmViewTests(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.old_password = "olddemon123"
+        cls.new_password = "newking123"
+
+        cls.user = User.objects.create_user(
+            username="crowly",
+            email="crowlytheking@hell.com",
+            password=cls.old_password,
+        )
+
+    def get_reset_data(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+
+        return uid, token
+
+    def test_user_can_change_password_with_token(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(self.new_password))
+        self.assertFalse(self.user.check_password(self.old_password))
+
+    def test_invalid_token_is_rejected(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": "invalid token",
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invalid_uid_is_rejected(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": "invalid uid",
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_new_passwords_must_match(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": "lucifertheking123",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("new_password2", response.data)
+
+    def test_weak_password_gets_rejected(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": "123456",
+                "new_password2": "123456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("new_password", response.data)
+
+    def test_token_cannot_be_reused(self):
+        uid, token = self.get_reset_data()
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        duplicate_response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(duplicate_response.status_code, status.HTTP_400_BAD_REQUEST)

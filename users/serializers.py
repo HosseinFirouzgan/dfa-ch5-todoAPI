@@ -4,6 +4,10 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 User = get_user_model()
 
@@ -108,3 +112,34 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.save(update_fields=["password"])
 
         return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def save(self):
+        email = self.validated_data["email"]
+
+        user = User.objects.filter(email=email).first()
+
+        # if the user does not exist the serializer exits silently with no exceptions raised
+        if not user:
+            return
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        token = default_token_generator.make_token(user)
+
+        reset_url = (
+            f"https://localhost:8000/api/users/password-reset/confirm/"
+            f"{uid}/{token}/"
+        )
+
+        send_mail(
+            subject="Password Reset",
+            message=(
+                "use the following link to reset your password\n\n" f"{reset_url}"
+            ),
+            from_email="noreply@todo.list",
+            recipient_list=[user.email],
+        )
