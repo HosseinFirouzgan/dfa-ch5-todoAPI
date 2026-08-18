@@ -380,7 +380,22 @@ class PasswordResetViewTest(APITestCase):
         # print(list(mail.outbox))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("Password Reset", mail.outbox[0].subject)
+
+        email = mail.outbox[0]
+
+        self.assertEqual(
+            email.to,
+            [self.user.email],
+        )
+
+        self.assertIn("Password Reset", email.subject)
+
+        # uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+
+        # token = default_token_generator.make_token(self.user)
+
+        self.assertIn("uid=", email.body)
+        self.assertIn("token=", email.body)
 
     def test_unknown_email_returns_success(self):
         response = self.client.post(

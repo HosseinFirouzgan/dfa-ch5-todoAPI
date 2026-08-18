@@ -173,3 +173,6 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"  # stores email in memeory making them available in tests
+
+
+PASSWORD_RESET_URL = "https://localhost:8000/api/users/password-reset/confirm/"
