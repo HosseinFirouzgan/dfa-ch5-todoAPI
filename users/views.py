@@ -8,6 +8,7 @@ from .serializers import (
     ChangePasswordSerializer,
     LogoutSerializer,
     PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
     RegisterSerializer,
     LoginSerializer,
     UserSerializer,
@@ -84,4 +85,8 @@ class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
