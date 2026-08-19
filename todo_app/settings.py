@@ -174,5 +174,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"  # stores email in memeory making them available in tests
 
-
+# Password reset
 PASSWORD_RESET_URL = "https://localhost:8000/api/users/password-reset/confirm/"
+## The timeout for the reset token after this period the token is no longer valid
+PASSWORD_RESET_TIMEOUT = 60 * 15  # 60 seconds * 15 minutes

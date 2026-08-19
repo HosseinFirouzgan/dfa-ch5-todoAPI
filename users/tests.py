@@ -6,6 +6,9 @@ from django.core import mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
+from django.test import override_settings
+from unittest.mock import patch
+from datetime import datetime, timedelta
 
 User = get_user_model()
 
@@ -551,3 +554,24 @@ class PasswordResetConfirmViewTests(APITestCase):
         )
 
         self.assertEqual(duplicate_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(PASSWORD_RESET_TIMEOUT=1)
+    @patch("django.contrib.auth.tokens.PasswordResetTokenGenerator._now")
+    def test_expired_token_is_rejected(self, mock_now_time):
+        uid, token = self.get_reset_data()
+
+        mock_now_time.return_value = datetime.now() + timedelta(seconds=2)
+
+        response = self.client.post(
+            reverse("password_reset_confirm"),
+            {
+                "uid": uid,
+                "token": token,
+                "new_password": self.new_password,
+                "new_password2": self.new_password,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", response.data)
