@@ -3,6 +3,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from .serializers import (
     ChangePasswordSerializer,
@@ -23,10 +24,17 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]  # Anyone can signup no tokens needed
+    # Setting throttle_classes on a view replaces
+    # its throttles entirely rather than adding to
+    # the defaults — that's why the scoped views need their own explicit rate.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "register"
 
 
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
 
 class LogoutView(generics.GenericAPIView):
@@ -67,6 +75,8 @@ class ProfileView(generics.RetrieveAPIView):
 
 class PasswordResetView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "pass-reset"
 
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)

@@ -152,6 +152,18 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
+    # Rate limiting
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/minute",
+        "user": "60/minute",
+        "register": "5/minute",
+        "login": "5/minute",
+        "pass-reset": "5/minute",
+    },
 }
 
 
@@ -175,6 +187,6 @@ CSRF_TRUSTED_ORIGINS = [
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"  # stores email in memeory making them available in tests
 
 # Password reset
-PASSWORD_RESET_URL = "https://localhost:8000/api/users/password-reset/confirm/"
+PASSWORD_RESET_URL = "https://localhost:8000/api/auth/password-reset-confirm/"
 ## The timeout for the reset token after this period the token is no longer valid
 PASSWORD_RESET_TIMEOUT = 60 * 15  # 60 seconds * 15 minutes
