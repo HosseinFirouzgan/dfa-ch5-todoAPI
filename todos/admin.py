@@ -11,7 +11,6 @@ class TodoAdmin(admin.ModelAdmin):
     )
 
 
-admin.site.register(Todo, TodoAdmin)
 """
 
 
@@ -29,3 +28,6 @@ class TodoAdmin(admin.ModelAdmin):
         "body",
         "user__username",
     )
+
+
+admin.site.register(Todo, TodoAdmin)
