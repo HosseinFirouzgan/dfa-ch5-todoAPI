@@ -484,40 +484,6 @@ urlpatterns = [
 ]
 </file>
 
-<file path="todos/admin.py">
-from django.contrib import admin
-
-from .models import Todo
-
-# Register your models here.
-"""
-class TodoAdmin(admin.ModelAdmin):
-    list_display = (
-        "title",
-        "body",
-    )
-
-
-admin.site.register(Todo, TodoAdmin)
-"""
-
-
-class TodoAdmin(admin.ModelAdmin):
-    list_display = (
-        "title",
-        "user",
-        "completed",
-    )
-
-    list_filter = ("completed",)
-
-    search_fields = (
-        "title",
-        "body",
-        "user__username",
-    )
-</file>
-
 <file path="users/models.py">
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -553,6 +519,42 @@ types-psycopg2==2.9.21.20260724
 types-PyYAML==6.0.12.20260724
 typing_extensions==4.16.0
 whitenoise==6.12.0
+</file>
+
+<file path="todos/admin.py">
+from django.contrib import admin
+
+from .models import Todo
+
+# Register your models here.
+"""
+class TodoAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "body",
+    )
+
+
+"""
+
+
+class TodoAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "user",
+        "completed",
+    )
+
+    list_filter = ("completed",)
+
+    search_fields = (
+        "title",
+        "body",
+        "user__username",
+    )
+
+
+admin.site.register(Todo, TodoAdmin)
 </file>
 
 <file path="todos/views.py">
@@ -714,6 +716,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from .serializers import (
     ChangePasswordSerializer,
@@ -734,10 +737,17 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]  # Anyone can signup no tokens needed
+    # Setting throttle_classes on a view replaces
+    # its throttles entirely rather than adding to
+    # the defaults — that's why the scoped views need their own explicit rate.
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "register"
 
 
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
 
 class LogoutView(generics.GenericAPIView):
@@ -778,6 +788,8 @@ class ProfileView(generics.RetrieveAPIView):
 
 class PasswordResetView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "pass-reset"
 
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
@@ -1744,6 +1756,20 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
+    # Rate limiting
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/minute",
+        "user": "60/minute",
+        "register": "5/minute",
+        "login": "5/minute",
+        "pass-reset": "5/minute",
+    },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 }
 
 
@@ -1751,6 +1777,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 CORS_ALLOWED_ORIGINS = (
@@ -1767,7 +1794,7 @@ CSRF_TRUSTED_ORIGINS = [
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"  # stores email in memeory making them available in tests
 
 # Password reset
-PASSWORD_RESET_URL = "https://localhost:8000/api/users/password-reset/confirm/"
+PASSWORD_RESET_URL = "https://localhost:8000/api/auth/password-reset-confirm/"
 ## The timeout for the reset token after this period the token is no longer valid
 PASSWORD_RESET_TIMEOUT = 60 * 15  # 60 seconds * 15 minutes
 </file>

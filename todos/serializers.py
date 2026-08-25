@@ -11,4 +11,6 @@ class TodoSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "completed",
+            "created_at",
+            "updated_at",
         )

@@ -165,7 +165,7 @@ REST_FRAMEWORK = {
         "pass-reset": "5/minute",
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
+    "PAGE_SIZE": 5,
 }
 
 
